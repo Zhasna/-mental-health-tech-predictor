@@ -5,7 +5,7 @@ industry is likely to seek mental health treatment, based on the
 OSMI Mental Health in Tech Survey dataset (2014–2019).
 
 ## Live Demo
-[Link to your Streamlit app]
+https://osmimentalhealthtreatmentpredictor.streamlit.app/
 
 ## Project Overview
 Mental health in the workplace is an important but often overlooked issue 
@@ -44,3 +44,5 @@ Covers 4,218 respondents across 5 survey years (2014–2019).
 
 ## Author
 Hasna Fahima Zahir Hussain — B.Tech Information Technology, Easwari Engineering College
+https://github.com/Zhasna
+www.linkedin.com/in/hasna-fahima15
