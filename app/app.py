@@ -4,8 +4,14 @@ import pickle
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
 
-with open('../model/rf_model.pkl', 'rb') as f:
+import os
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+with open(os.path.join(base_dir, 'model', 'rf_model.pkl'), 'rb') as f:
     rf_model = pickle.load(f)
+
+with open(os.path.join(base_dir, 'model', 'encoders.pkl'), 'rb') as f:
+    encoders = pickle.load(f)
 
 st.title("Mental Health Treatment Predictor")
 st.write("Predicts whether someone in the tech industry is likely to seek mental health treatment based on personal and workplace factors.")
@@ -26,9 +32,6 @@ company_size = st.selectbox("How many employees does your company have?",
 anonymity = st.selectbox("Is your anonymity protected if you use mental health resources?", ["Yes", "No", "Don't know"])
 mental_health_benefits = st.selectbox("Does your employer provide mental health benefits?", ["Yes", "No", "Don't know"])
 primary_role = st.selectbox("Is your primary role related to tech/IT?", ["Yes", "No"])
-
-with open('../model/encoders.pkl', 'rb') as f:
-    encoders = pickle.load(f)
 
 if st.button("Predict"):
     input_dict = {
