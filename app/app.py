@@ -2,9 +2,14 @@ import streamlit as st
 import pandas as pd
 import pickle
 import numpy as np
-from sklearn.preprocessing import LabelEncoder
-
+import matplotlib.pyplot as plt
 import os
+
+st.set_page_config(
+    page_title="Mental Health in Tech — Treatment Predictor",
+    layout="wide"
+)
+
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 with open(os.path.join(base_dir, 'model', 'rf_model.pkl'), 'rb') as f:
@@ -13,30 +18,95 @@ with open(os.path.join(base_dir, 'model', 'rf_model.pkl'), 'rb') as f:
 with open(os.path.join(base_dir, 'model', 'encoders.pkl'), 'rb') as f:
     encoders = pickle.load(f)
 
+# Header
 st.title("Mental Health Treatment Predictor")
-st.write("Predicts whether someone in the tech industry is likely to seek mental health treatment based on personal and workplace factors.")
+st.markdown("*Will someone in the tech industry seek mental health treatment?*")
+st.divider()
 
-st.header("About you")
-age = st.slider("What is your age?", 18, 80, 30)
-gender = st.selectbox("What is your gender?", ["Male", "Female", "Other"])
-family_history = st.selectbox("Do you have a family history of mental illness?", ["Yes", "No"])
-current_disorder = st.selectbox("Do you currently have a mental health disorder?", ["Yes", "No", "Maybe"])
-past_disorder = st.selectbox("Have you had a mental health disorder in the past?", ["Yes", "No", "Maybe"])
-ever_diagnosed = st.selectbox("Have you ever been diagnosed with a mental health disorder?", ["Yes", "No"])
+# Key stats row
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric("Model Accuracy", "85%")
+with col2:
+    st.metric("Respondents Analyzed", "4,200+")
+with col3:
+    st.metric("Survey Years", "2014 – 2019")
 
-st.header("About your workplace")
-self_employed = st.selectbox("Are you self-employed?", ["0", "1"])
-tech_company = st.selectbox("Is your employer primarily a tech company?", ["Yes", "No"])
-company_size = st.selectbox("How many employees does your company have?",
-    ["1-5", "6-25", "26-100", "100-500", "500-1000", "More than 1000"])
-anonymity = st.selectbox("Is your anonymity protected if you use mental health resources?", ["Yes", "No", "Don't know"])
-mental_health_benefits = st.selectbox("Does your employer provide mental health benefits?", ["Yes", "No", "Don't know"])
-primary_role = st.selectbox("Is your primary role related to tech/IT?", ["Yes", "No"])
+st.divider()
 
-if st.button("Predict"):
+# Key finding callout
+st.info("""
+**Key Finding:** Personal mental health history — prior diagnosis, past disorders, 
+and how symptoms affect work — is a far stronger predictor of seeking treatment 
+than workplace factors like employer benefits or company size.
+""")
+
+st.divider()
+
+# Feature importance chart
+st.subheader("What predicts treatment-seeking behavior?")
+st.caption("Top 10 most influential factors from the Random Forest model")
+
+feature_names = [
+    "Ever been diagnosed",
+    "Had disorder in the past",
+    "Disorder interferes (treated)",
+    "Disorder interferes (untreated)",
+    "Currently have disorder",
+    "Family history",
+    "Age",
+    "Previous employer benefits",
+    "Willingness to share with family",
+    "Observed unsupportive response"
+]
+importance_values = [0.189, 0.143, 0.105, 0.102, 0.049, 0.033, 0.030, 0.022, 0.021, 0.018]
+
+fig, ax = plt.subplots(figsize=(8, 4))
+colors = ['#2ecc71' if i < 4 else '#95a5a6' for i in range(len(feature_names))]
+bars = ax.barh(feature_names[::-1], importance_values[::-1], color=colors[::-1])
+ax.set_xlabel("Importance Score")
+ax.set_facecolor('#0e1117')
+fig.patch.set_facecolor('#0e1117')
+ax.tick_params(colors='white')
+ax.xaxis.label.set_color('white')
+ax.spines['bottom'].set_color('#444')
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+ax.spines['left'].set_color('#444')
+st.pyplot(fig)
+
+st.divider()
+
+# Predictor form
+st.subheader("Try it yourself")
+st.caption("Fill in your profile and see what the model predicts")
+
+col_left, col_right = st.columns(2)
+
+with col_left:
+    st.markdown("**About you**")
+    age = st.slider("Age", 18, 80, 30)
+    gender = st.selectbox("Gender", ["Male", "Female", "Other"])
+    family_history = st.selectbox("Family history of mental illness?", ["Yes", "No"])
+    current_disorder = st.selectbox("Currently have a mental health disorder?", ["Yes", "No", "Maybe"])
+    past_disorder = st.selectbox("Had a mental health disorder in the past?", ["Yes", "No", "Maybe"])
+    ever_diagnosed = st.selectbox("Ever been diagnosed with a mental health disorder?", ["Yes", "No"])
+
+with col_right:
+    st.markdown("**About your workplace**")
+    self_employed = st.selectbox("Self-employed?", ["No", "Yes"])
+    tech_company = st.selectbox("Employer primarily a tech company?", ["Yes", "No"])
+    company_size = st.selectbox("Company size", ["1-5", "6-25", "26-100", "100-500", "500-1000", "More than 1000"])
+    anonymity = st.selectbox("Anonymity protected if using mental health resources?", ["Yes", "No", "Don't know"])
+    mental_health_benefits = st.selectbox("Employer provides mental health benefits?", ["Yes", "No", "Don't know"])
+    primary_role = st.selectbox("Primary role related to tech/IT?", ["Yes", "No"])
+
+st.divider()
+
+if st.button("Predict", type="primary", use_container_width=True):
     input_dict = {
         'SurveyID': 2019,
-        'Are you self-employed?': int(self_employed),
+        'Are you self-employed?': 1 if self_employed == "Yes" else 0,
         'Did your previous employers ever formally discuss mental health (as part of a wellness campaign or other official communication)?': 0,
         'Did your previous employers provide resources to learn more about mental health disorders and how to seek help?': 0,
         'Do you believe your productivity is ever affected by a mental health issue?': 1,
@@ -88,12 +158,50 @@ if st.button("Predict"):
 
     prediction = rf_model.predict(input_df)[0]
     probability = rf_model.predict_proba(input_df)[0]
+    confidence = max(probability) * 100
 
     st.divider()
-    if prediction == 1:
-        st.success("This person is **likely to seek** mental health treatment")
-    else:
-        st.warning("This person is **unlikely to seek** mental health treatment")
+    res_col1, res_col2 = st.columns([2, 1])
 
-    st.metric("Confidence", f"{max(probability)*100:.1f}%")
-    st.caption("This prediction is based on patterns in the OSMI Mental Health in Tech Survey dataset and is not a clinical assessment.")
+    with res_col1:
+        if prediction == 1:
+            st.success("### Likely to seek mental health treatment")
+        else:
+            st.warning("### Unlikely to seek mental health treatment")
+
+    with res_col2:
+        st.metric("Confidence", f"{confidence:.1f}%")
+
+    # Probability bar
+    st.markdown("**Prediction breakdown**")
+    prob_df = pd.DataFrame({
+        'Outcome': ['Unlikely to seek treatment', 'Likely to seek treatment'],
+        'Probability': [probability[0] * 100, probability[1] * 100]
+    })
+
+    fig2, ax2 = plt.subplots(figsize=(8, 1.5))
+    ax2.barh([''], [probability[0] * 100], color='#e74c3c', label='Unlikely')
+    ax2.barh([''], [probability[1] * 100], left=[probability[0] * 100], color='#2ecc71', label='Likely')
+    ax2.set_xlim(0, 100)
+    ax2.set_xlabel('Probability (%)')
+    ax2.set_facecolor('#0e1117')
+    fig2.patch.set_facecolor('#0e1117')
+    ax2.tick_params(colors='white')
+    ax2.xaxis.label.set_color('white')
+    ax2.spines['bottom'].set_color('#444')
+    ax2.spines['top'].set_visible(False)
+    ax2.spines['right'].set_visible(False)
+    ax2.spines['left'].set_visible(False)
+    ax2.legend(loc='upper right', facecolor='#0e1117', labelcolor='white')
+    st.pyplot(fig2)
+
+    st.caption("This prediction is based on patterns in the OSMI Mental Health in Tech Survey and is not a clinical assessment.")
+
+st.divider()
+st.markdown("""
+<div style='text-align: center; color: gray; font-size: 0.85rem;'>
+Built by Hasna Fahima · 
+<a href='https://github.com/Zhasna/-mental-health-tech-predictor' style='color: gray;'>GitHub</a> · 
+Data: OSMI Mental Health in Tech Survey (2014–2019)
+</div>
+""", unsafe_allow_html=True)
